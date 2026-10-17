@@ -1,0 +1,15 @@
+{
+  "experiment_id": "tta-26-01181-stage7-vector-db-v1",
+  "dataset_version": "tta-26-01181-eval-reviewed-v1",
+  "evaluation_split": "development",
+  "baseline": {"name":"M0-bm25","embedding_provider":"mock","embedding_model":"local-hash-v1","embedding_input":"E2","search_unit":"C1","search_method":"keyword","top_k":10,"candidate_k":20,"rrf_candidate_k":50,"rrf_k":60,"rerank":"none","query_mode":"Q3","selection":"similarity","filters":"project_version","context_token_budget":4000,"preprocess":"whitespace","chunk_chars":2000,"chunk_overlap":200,"group_size":5,"dimension":384,"device":"cpu","batch_size":16,"normalize_embeddings":true},
+  "experiments": [
+    {"name":"M1-local-hash-vector-db","embedding_provider":"mock","search_method":"vector","vector_index_version":"stage7-full-local-hash-e2-v1"},
+    {"name":"M2-bge-m3-vector-db","embedding_provider":"local","embedding_model":"BAAI/bge-m3","dimension":1024,"search_method":"vector","vector_index_version":"stage7-full-bge-m3-e2-v1","model_revision":null,"device":"auto","batch_size":8,"normalize_embeddings":true,"max_seq_length":8192,"model_cache_dir":".tc-rag/models"},
+    {"name":"M3-local-hash-hybrid-db","embedding_provider":"mock","search_method":"hybrid","vector_index_version":"stage7-full-local-hash-e2-v1"},
+    {"name":"M4-bge-m3-hybrid-db","embedding_provider":"local","embedding_model":"BAAI/bge-m3","dimension":1024,"search_method":"hybrid","vector_index_version":"stage7-full-bge-m3-e2-v1","model_revision":null,"device":"auto","batch_size":8,"normalize_embeddings":true,"max_seq_length":8192,"model_cache_dir":".tc-rag/models"}
+  ],
+  "generation": {"retrieval_settings":["M0-bm25","M2-bge-m3-vector-db","M4-bge-m3-hybrid-db"],"conditions":["G0","G1"],"backends":["codex"],"repetitions":3,"target_count":5,"instructions_version":"generation-v1","schema_version":"candidate-v1"},
+  "pricing": null,
+  "term_map": {}
+}

@@ -423,26 +423,31 @@ def aggregate(rows: list[dict[str,Any]]) -> dict[str,Any]:
 
 
 def generation_plan(dataset: dict[str,Any], config: dict[str,Any], retrieval_rows: list[dict[str,Any]]) -> list[dict[str,Any]]:
-    selected=[c for c in dataset["cases"] if not config.get("evaluation_split") or c.get("split")==config["evaluation_split"]]
+    requested_case_ids=set(config.get("generation",{}).get("case_ids",[]))
+    selected=[c for c in dataset["cases"] if (not config.get("evaluation_split") or c.get("split")==config["evaluation_split"]) and (not requested_case_ids or c.get("case_id") in requested_case_ids)]
     cases={c["case_id"]:c for c in selected}; best={}
-    preferred=config.get("generation",{}).get("retrieval_setting","baseline")
+    generation=config.get("generation",{})
+    preferreds=generation.get("retrieval_settings") or [generation.get("retrieval_setting","baseline")]
     for r in retrieval_rows:
-        if r.get("status") in {"actual","mock"} and r.get("setting",{}).get("name")==preferred:
-            if r["case_id"] not in best or r.get("status")=="actual": best[r["case_id"]]=r
-    gen=config.get("generation",{}); plans=[]
-    for case_id,case in cases.items():
-        actual=best.get(case_id,{}).get("context_record_ids",[])
+        setting_name=r.get("setting",{}).get("name")
+        if r.get("status") in {"actual","mock"} and setting_name in preferreds:
+            key=(r["case_id"],setting_name)
+            if key not in best or r.get("status")=="actual": best[key]=r
+    plans=[]
+    for retrieval_setting in preferreds:
+      for case_id,case in cases.items():
+        actual=best.get((case_id,retrieval_setting),{}).get("context_record_ids",[])
         hidden=set(case.get("hidden_record_ids",[])); curated=set(case.get("curated_evidence_ids",[]))
         if hidden & curated: raise ValueError(f"{case_id}: hidden answer leaked into curated evidence")
         if hidden & set(actual): raise ValueError(f"{case_id}: hidden answer leaked into retrieved evidence")
-        for condition in gen.get("conditions",["G0","G1"]):
-            if condition=="G1" and case_id not in best: raise ValueError(f"{case_id}: G1 requires one successful retrieval result")
+        for condition in generation.get("conditions",["G0","G1"]):
+            if condition=="G1" and (case_id,retrieval_setting) not in best: raise ValueError(f"{case_id}: G1 requires one successful retrieval result for {retrieval_setting}")
             evidence=[] if condition=="G0" else actual if condition=="G1" else case.get("curated_evidence_ids",[])
             if set(evidence)&hidden: raise ValueError(f"{case_id}: hidden answer leaked into {condition}")
-            common={"case_id":case_id,"user_request":case["user_request"],"evidence_record_ids":evidence,"retrieval_execution_mode":best.get(case_id,{}).get("execution_mode") if condition=="G1" else None,"retrieval_task_id":best.get(case_id,{}).get("task_id") if condition=="G1" else None,"instructions_version":gen.get("instructions_version","generation-v1"),"schema_version":gen.get("schema_version","candidate-v1"),"target_count":gen.get("target_count",5)}
+            common={"case_id":case_id,"user_request":case["user_request"],"retrieval_setting":retrieval_setting,"evidence_record_ids":evidence,"retrieval_execution_mode":best.get((case_id,retrieval_setting),{}).get("execution_mode") if condition=="G1" else None,"retrieval_task_id":best.get((case_id,retrieval_setting),{}).get("task_id") if condition=="G1" else None,"instructions_version":generation.get("instructions_version","generation-v1"),"schema_version":generation.get("schema_version","candidate-v1"),"target_count":generation.get("target_count",5)}
             common_hash=sha(common)
-            for backend in gen.get("backends",[]):
-                for repeat in range(int(gen.get("repetitions",3))): plans.append({**common,"condition":condition,"backend":backend,"repeat":repeat+1,"common_input_hash":common_hash,"task_id":sha([common_hash,backend,repeat+1])})
+            for backend in generation.get("backends",[]):
+                for repeat in range(int(generation.get("repetitions",3))): plans.append({**common,"condition":condition,"backend":backend,"repeat":repeat+1,"common_input_hash":common_hash,"task_id":sha([common_hash,backend,repeat+1])})
     return plans
 
 
