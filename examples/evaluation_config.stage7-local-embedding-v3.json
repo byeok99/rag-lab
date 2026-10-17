@@ -1,0 +1,17 @@
+{
+  "experiment_id": "tta-26-01181-stage7-local-embedding-v3",
+  "dataset_version": "tta-26-01181-eval-reviewed-v1",
+  "evaluation_split": "development",
+  "baseline": {
+    "name": "M0-bm25", "embedding_provider": "mock", "embedding_model": "local-hash-v1", "embedding_input": "E2", "search_unit": "C1", "search_method": "keyword", "top_k": 10, "candidate_k": 20, "rrf_candidate_k": 50, "rrf_k": 60, "rerank": "none", "query_mode": "Q3", "selection": "similarity", "filters": "project_version", "context_token_budget": 4000, "preprocess": "whitespace", "chunk_chars": 2000, "chunk_overlap": 200, "group_size": 5, "dimension": 384, "device": "cpu", "batch_size": 16, "normalize_embeddings": true
+  },
+  "experiments": [
+    {"name": "M1-local-hash-vector", "embedding_provider": "mock", "search_method": "vector"},
+    {"name": "M2-bge-m3-vector", "embedding_provider": "local", "embedding_model": "BAAI/bge-m3", "dimension": 1024, "search_method": "vector", "model_revision": null, "device": "auto", "batch_size": 8, "normalize_embeddings": true, "max_seq_length": 8192, "model_cache_dir": ".tc-rag/models"},
+    {"name": "M3-local-hash-hybrid-rrf", "embedding_provider": "mock", "search_method": "hybrid"},
+    {"name": "M4-bge-m3-hybrid-rrf", "embedding_provider": "local", "embedding_model": "BAAI/bge-m3", "dimension": 1024, "search_method": "hybrid", "model_revision": null, "device": "auto", "batch_size": 8, "normalize_embeddings": true, "max_seq_length": 8192, "model_cache_dir": ".tc-rag/models"}
+  ],
+  "generation": {"conditions": [], "backends": [], "repetitions": 1},
+  "pricing": null,
+  "term_map": {}
+}

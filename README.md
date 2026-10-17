@@ -99,6 +99,8 @@ Stage 7 비교 설정과 재현 절차는 다음 파일에 있습니다.
 
 `outputs/stage7-local-embedding-v2/`에는 실행 설정, 환경 메타데이터, 질문별 결과와 완료 보고서가 저장됩니다. 원본 TC와 모델 캐시는 저장소에 포함하지 않습니다.
 
+BGE-M3 가중치를 확보한 뒤 실행한 실제 비교 결과는 `examples/evaluation_config.stage7-local-embedding-v3.json`과 `outputs/stage7-local-embedding-v3/`에 저장됩니다.
+
 ## 4. 프로젝트 구조
 
 ```text
