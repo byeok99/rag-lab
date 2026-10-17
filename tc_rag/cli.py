@@ -22,7 +22,7 @@ def parser() -> argparse.ArgumentParser:
     sub=p.add_subparsers(dest="command",required=True)
     x=sub.add_parser("import"); x.add_argument("files",nargs="+"); x.add_argument("--project",required=True); x.add_argument("--version",required=True); x.add_argument("--origin",choices=["original","synthetic"],default="original")
     x=sub.add_parser("split"); x.add_argument("--project",required=True); x.add_argument("--version",required=True); x.add_argument("--split-version",required=True); x.add_argument("--holdout",type=float,default=.2); x.add_argument("--seed",type=int,default=42)
-    x=sub.add_parser("index"); x.add_argument("--project",required=True); x.add_argument("--version",required=True); x.add_argument("--index-version",required=True); x.add_argument("--split-version"); x.add_argument("--provider",choices=["auto","mock","openai"],default="auto"); x.add_argument("--include-approved-generated",action="store_true")
+    x=sub.add_parser("index"); x.add_argument("--project",required=True); x.add_argument("--version",required=True); x.add_argument("--index-version",required=True); x.add_argument("--split-version"); x.add_argument("--provider",choices=["auto","mock","openai","local"],default="auto"); x.add_argument("--embedding-model",default="BAAI/bge-m3"); x.add_argument("--model-revision"); x.add_argument("--dimension",type=int); x.add_argument("--device",choices=["auto","cpu","mps","cuda"],default="auto"); x.add_argument("--batch-size",type=int,default=16); x.add_argument("--normalize-embeddings",action=argparse.BooleanOptionalAction,default=True); x.add_argument("--max-seq-length",type=int); x.add_argument("--model-cache-dir"); x.add_argument("--include-approved-generated",action="store_true")
     x=sub.add_parser("search"); _search_args(x)
     x=sub.add_parser("generate"); _search_args(x); x.add_argument("--conditions",default=""); x.add_argument("--llm",choices=["auto","mock","openai"],default="auto")
     x=sub.add_parser("list"); x.add_argument("--project"); x.add_argument("--version"); x.add_argument("--origin"); x.add_argument("--status")
@@ -42,7 +42,7 @@ def parser() -> argparse.ArgumentParser:
 
 
 def _search_args(x):
-    x.add_argument("query"); x.add_argument("--project",required=True); x.add_argument("--version",required=True); x.add_argument("--index-version",required=True); x.add_argument("--top-k",type=int,default=5); x.add_argument("--provider",choices=["auto","mock","openai"],default="auto"); x.add_argument("--cross-project",action="store_true")
+    x.add_argument("query"); x.add_argument("--project",required=True); x.add_argument("--version",required=True); x.add_argument("--index-version",required=True); x.add_argument("--top-k",type=int,default=5); x.add_argument("--provider",choices=["auto","mock","openai","local"],default="auto"); x.add_argument("--embedding-model",default="BAAI/bge-m3"); x.add_argument("--model-revision"); x.add_argument("--dimension",type=int); x.add_argument("--device",choices=["auto","cpu","mps","cuda"],default="auto"); x.add_argument("--batch-size",type=int,default=16); x.add_argument("--normalize-embeddings",action=argparse.BooleanOptionalAction,default=True); x.add_argument("--max-seq-length",type=int); x.add_argument("--model-cache-dir"); x.add_argument("--cross-project",action="store_true")
 
 
 def _public_result(item):
@@ -70,9 +70,9 @@ def main(argv=None) -> int:
         elif args.command=="split":
             if not 0 <= args.holdout < 1: raise ValueError("holdout must be >= 0 and < 1")
             result=make_split(store,args.project,args.version,args.split_version,args.holdout,args.seed)
-        elif args.command=="index": result=build_index(store,get_embedder(args.provider),args.project,args.version,args.index_version,args.split_version,args.include_approved_generated)
+        elif args.command=="index": result=build_index(store,get_embedder(args.provider, embedding_model=args.embedding_model, model_revision=args.model_revision, dimension=args.dimension, device=args.device, batch_size=args.batch_size, normalize_embeddings=args.normalize_embeddings, max_seq_length=args.max_seq_length, model_cache_dir=args.model_cache_dir),args.project,args.version,args.index_version,args.split_version,args.include_approved_generated)
         elif args.command in {"search","generate"}:
-            found=search(store,get_embedder(args.provider),args.query,args.project,args.version,args.index_version,args.top_k,args.cross_project)
+            found=search(store,get_embedder(args.provider, embedding_model=args.embedding_model, model_revision=args.model_revision, dimension=args.dimension, device=args.device, batch_size=args.batch_size, normalize_embeddings=args.normalize_embeddings, max_seq_length=args.max_seq_length, model_cache_dir=args.model_cache_dir),args.query,args.project,args.version,args.index_version,args.top_k,args.cross_project)
             if args.command=="search": result={"results":[_public_result(x) for x in found],"score":"cosine similarity, descending; not a probability","insufficient_evidence":len(found)<min(3,args.top_k)}
             else:
                 query={"project_id":args.project,"product_version":args.version,"scenario":args.query,"conditions":args.conditions}

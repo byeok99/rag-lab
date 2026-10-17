@@ -69,7 +69,7 @@ TC 파일 → 파싱·정규화 → SQLite 저장 → 개발/평가 분리
 | CLI | Python `argparse` |
 | 영속 저장소 | SQLite |
 | 벡터 저장 | SQLite `vector_index` 테이블 |
-| 로컬 임베딩 | 384차원 결정적 해시 벡터 |
+| 로컬 임베딩 | 384차원 결정적 해시 벡터, 선택적 SentenceTransformer |
 | 실제 임베딩 | OpenAI 호환 `/embeddings` API |
 | 모의 LLM | 확인 필요 후보 생성기 |
 | 실제 LLM | OpenAI 호환 `/responses` API |
@@ -77,6 +77,27 @@ TC 파일 → 파싱·정규화 → SQLite 저장 → 개발/평가 분리
 | `.xls` | `xlrd` |
 
 로컬 해시 임베딩은 서버 없이 전체 흐름을 검증하기 위한 구현입니다. 실제 의미 검색 품질을 보장하지 않습니다.
+
+### 선택적 BGE-M3 로컬 임베딩
+
+OpenAI API 없이 신경 임베딩을 비교하려면 선택적 의존성을 설치합니다.
+
+```bash
+uv venv .venv
+uv pip install --python .venv/bin/python -e '.[local-embedding]'
+```
+
+`embedding_provider: "local"`, `embedding_model: "BAAI/bge-m3"`를 평가 설정에 지정하면 문서와 질의를 같은 SentenceTransformer 모델로 임베딩합니다. 모델 차원은 로딩 후 실제 값과 설정을 검사하며, 모델을 다운로드할 수 없거나 캐시에 없으면 `not_run`으로 기록하고 Hash mock으로 대체하지 않습니다. `device: "auto"`는 CUDA, MPS, CPU 순으로 사용 가능 장치를 선택합니다.
+
+Stage 7 비교 설정과 재현 절차는 다음 파일에 있습니다.
+
+```bash
+.venv/bin/python -m tc_rag.cli --db .tc-rag/tc-rag.db eval dry-run \
+  --dataset examples/evaluation_cases.reviewed-v1.json \
+  --config examples/evaluation_config.stage7-local-embedding-v2.json
+```
+
+`outputs/stage7-local-embedding-v2/`에는 실행 설정, 환경 메타데이터, 질문별 결과와 완료 보고서가 저장됩니다. 원본 TC와 모델 캐시는 저장소에 포함하지 않습니다.
 
 ## 4. 프로젝트 구조
 

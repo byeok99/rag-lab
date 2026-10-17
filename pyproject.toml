@@ -9,9 +9,11 @@ description = "Evidence-first RAG CLI for test-case analysis and generation"
 requires-python = ">=3.11"
 dependencies = ["openpyxl>=3.1,<4", "xlrd>=2.0,<3"]
 
+[project.optional-dependencies]
+local-embedding = ["sentence-transformers>=3.0,<6"]
+
 [project.scripts]
 tc-rag = "tc_rag.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["tc_rag*"]
-

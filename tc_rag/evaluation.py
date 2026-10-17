@@ -19,7 +19,10 @@ DEFAULTS = {
     "top_k": 5, "candidate_k": 20, "rerank": "none", "query_mode": "Q1",
     "selection": "similarity", "mmr_lambda": .7, "filters": "project_version",
     "context_token_budget": 4000, "preprocess": "whitespace", "chunk_chars": 2000,
-    "chunk_overlap": 200, "group_size": 5, "rrf_k": 60, "embedding_provider": "mock",
+    "chunk_overlap": 200, "group_size": 5, "rrf_k": 60, "rrf_candidate_k": 50,
+    "embedding_provider": "mock", "embedding_model": "local-hash-v1",
+    "model_revision": None, "dimension": 384, "device": "cpu", "batch_size": 16,
+    "normalize_embeddings": True, "max_seq_length": None, "model_cache_dir": None,
 }
 REQUIRED_CASE = {
     "case_id", "project_id", "product_version", "user_request", "evaluation_purpose",
@@ -142,10 +145,16 @@ def validate_inputs(store: Store, dataset: dict[str, Any], config: dict[str, Any
 
 def _validate_setting(s: dict[str,Any], name: str) -> list[str]:
     errors=[]
-    allowed={"embedding_input":{"E1","E2","E3","E4"},"search_unit":{"C1","C2","C3"},"search_method":{"vector","keyword","hybrid"},"query_mode":{"Q1","Q2","Q3","Q4"},"selection":{"similarity","mmr"},"preprocess":{"raw","whitespace","terms"},"embedding_provider":{"mock","openai"},"rerank":{"none","lexical-20","lexical-50"},"filters":{"project_version","category_large","category_medium"}}
+    allowed={"embedding_input":{"E1","E2","E3","E4"},"search_unit":{"C1","C2","C3"},"search_method":{"vector","keyword","hybrid"},"query_mode":{"Q1","Q2","Q3","Q4"},"selection":{"similarity","mmr"},"preprocess":{"raw","whitespace","terms"},"embedding_provider":{"mock","openai","local","sentence-transformers"},"rerank":{"none","lexical-20","lexical-50"},"filters":{"project_version","category_large","category_medium"}}
     for key,values in allowed.items():
         if s.get(key) not in values: errors.append(f"{name}.{key} must be one of {sorted(values)}")
     if s.get("embedding_provider")=="auto": errors.append(f"{name}.embedding_provider must be explicit; auto can silently fall back to mock")
+    if s.get("embedding_provider") in {"local", "sentence-transformers"} and not str(s.get("embedding_model") or "").strip(): errors.append(f"{name}.embedding_model is required for local embeddings")
+    for key in ("dimension", "batch_size"):
+        try:
+            if int(s.get(key, 0)) <= 0: errors.append(f"{name}.{key} must be positive")
+        except (TypeError, ValueError): errors.append(f"{name}.{key} must be an integer")
+    if s.get("device") not in {"auto", "cpu", "mps", "cuda"}: errors.append(f"{name}.device must be auto, cpu, mps, or cuda")
     try: top_k=int(s.get("top_k",0))
     except (TypeError,ValueError): top_k=0
     try: candidate_k=int(s.get("candidate_k",0))
@@ -255,10 +264,13 @@ def _keyword_scores(query: str, units: list[dict[str,Any]]) -> list[float]:
 
 
 def _rank_units(embedder, queries: list[str], units: list[dict[str,Any]], setting: dict[str,Any], document_vectors: list[list[float]]|None=None) -> tuple[list[dict[str,Any]],dict[str,float],list[list[float]]|None]:
+    started=time.perf_counter()
     method=setting["search_method"]; vector_scores=[0.0]*len(units); keyword_scores=[0.0]*len(units); vectors=None; qvectors=None
+    embedding_started=time.perf_counter()
     if method in {"vector","hybrid"}:
         vectors=document_vectors if document_vectors is not None else embedder.embed([u["text"] for u in units]); qvectors=embedder.embed(queries)
         vector_scores=[max(sum(a*b for a,b in zip(qv,dv)) for qv in qvectors) for dv in vectors]
+    embedding_seconds=round(time.perf_counter()-embedding_started,6) if method in {"vector","hybrid"} else 0.0
     if method in {"keyword","hybrid"} or setting.get("rerank") in {"lexical-20","lexical-50"}:
         per=[_keyword_scores(q,units) for q in queries]; keyword_scores=[max(row[i] for row in per) for i in range(len(units))]
     if method=="hybrid":
@@ -279,13 +291,14 @@ def _rank_units(embedder, queries: list[str], units: list[dict[str,Any]], settin
             chosen.append(idx); remaining.remove(idx)
         ranked=chosen
     reranked=setting.get("rerank") in {"lexical-20","lexical-50"}
-    return [{**units[i],"unit_score":keyword_scores[i] if reranked else scores[i],"score_type":"bm25_rerank" if reranked else score_type,"initial_score":scores[i],"initial_rank":initial_rank[i]} for i in ranked],{"embedding_calls":int(method in {"vector","hybrid"})},vectors
+    timing={"embedding_calls":int(method in {"vector","hybrid"}),"embedding_seconds":embedding_seconds,"search_seconds":round(time.perf_counter()-started,6)}
+    return [{**units[i],"unit_score":keyword_scores[i] if reranked else scores[i],"score_type":"bm25_rerank" if reranked else score_type,"initial_score":scores[i],"initial_rank":initial_rank[i]} for i in ranked],timing,vectors
 
 
 def _persist_experiment_index(store: Store, units: list[dict[str,Any]], vectors: list[list[float]]|None, embedder, version: str, setting: dict[str,Any]) -> None:
     if vectors is None: return
     for i,(unit,vector) in enumerate(zip(units,vectors)):
-        rid=unit["member_ids"][0]; metadata={"member_record_ids":unit["member_ids"],"project_id":unit["tc"].project_id,"product_version":unit["tc"].product_version,"experiment":True,"setting":setting["name"]}
+        rid=unit["member_ids"][0]; metadata={"member_record_ids":unit["member_ids"],"project_id":unit["tc"].project_id,"product_version":unit["tc"].product_version,"experiment":True,"setting":setting["name"],"provider":setting.get("embedding_provider"),"model_id":setting.get("embedding_model",embedder.name),"revision":setting.get("model_revision"),"dimension":len(vector),"normalize_embeddings":setting.get("normalize_embeddings",True),"embedding_input":setting.get("embedding_input"),"preprocess":setting.get("preprocess"),"index_version":version}
         store.db.execute("INSERT OR IGNORE INTO vector_index VALUES(?,?,?,?,?,?,?,?,?)",(version,rid,f"unit:{i}",embedder.name,len(vector),f"{setting['embedding_input']}:{setting['preprocess']}:{setting['search_unit']}",json.dumps(vector),stable_json(metadata),now()))
     store.db.commit()
 
@@ -300,7 +313,7 @@ def collapse_units(ranked: list[dict[str,Any]], cases: dict[str,TestCase], k: in
 
 def metrics(retrieved: list[str], relevant: set[str], k: int, grades: dict[str,int]|None=None) -> dict[str,Any]:
     top=retrieved[:k]; hits=[rid in relevant for rid in top]; first=next((i+1 for i,x in enumerate(hits) if x),None)
-    out={"precision_at_k":sum(hits)/k,"recall_at_k":sum(hits)/len(relevant) if relevant else None,"mrr_at_k":1/first if first else 0.0,"relevant_count":len(relevant),"retrieved_count":len(top),"shortfall":max(0,k-len(top))}
+    out={"precision_at_k":sum(hits)/k,"recall_at_k":sum(hits)/len(relevant) if relevant else None,"mrr_at_k":1/first if first else 0.0,"hit_rate_at_k":1.0 if any(hits) else 0.0,"relevant_count":len(relevant),"retrieved_count":len(top),"shortfall":max(0,k-len(top))}
     if grades:
         dcg=sum((2**grades.get(rid,0)-1)/math.log2(i+2) for i,rid in enumerate(top)); ideal=sorted(grades.values(),reverse=True)[:k]; idcg=sum((2**g-1)/math.log2(i+2) for i,g in enumerate(ideal)); out["ndcg_at_k"]=dcg/idcg if idcg else None
     else: out["ndcg_at_k"]=None
@@ -327,8 +340,17 @@ def run_retrieval(store: Store, dataset: dict[str,Any], config: dict[str,Any], o
     for case in selected:
         all_cases=store.list_cases(case["project_id"],case["product_version"]); hidden=set(case.get("hidden_record_ids",[])); searchable=[tc for tc in all_cases if tc.record_id not in hidden and tc.origin!="generated"]
         for setting in settings:
-            embedder=get_embedder(setting["embedding_provider"])
-            embedder_identity={"name":embedder.name,"dimension":embedder.dimension}
+            try:
+                embedder=(get_embedder(setting["embedding_provider"], **setting) if setting["embedding_provider"] in {"local", "sentence-transformers"} else get_embedder(setting["embedding_provider"]))
+                embedder_identity={"provider":setting["embedding_provider"],"name":embedder.name,"model":getattr(embedder,"model_id",embedder.name),"revision":getattr(embedder,"model_revision",None),"dimension":embedder.dimension,"normalize_embeddings":getattr(embedder,"normalize_embeddings",True),"device":getattr(embedder,"device",None)}
+            except Exception as exc:
+                embedder_identity={"provider":setting["embedding_provider"],"name":setting.get("embedding_model"),"model":setting.get("embedding_model"),"revision":setting.get("model_revision"),"dimension":setting.get("dimension"),"normalize_embeddings":setting.get("normalize_embeddings"),"device":setting.get("device")}
+                task_id=sha({"dataset_version":dataset["dataset_version"],"case":case,"setting":setting,"term_map":terms,"embedder":embedder_identity})
+                if task_id in completed: continue
+                row={"experiment_id":config.get("experiment_id","experiment"),"task_id":task_id,"case_id":case["case_id"],"evaluation_type":case.get("evaluation_type","retrieval"),"evaluation_purpose":case.get("evaluation_purpose"),"run_id":"ret_"+task_id[:12],"executed_at":now(),"dataset_version":dataset["dataset_version"],"setting":setting,"embedder":embedder_identity,"status":"not_run","execution_mode":"not_run","duration_seconds":0.0,"error":str(exc),"not_run_reason":"local embedding model unavailable or failed to load"}
+                with result_file.open("a",encoding="utf-8") as f: f.write(stable_json(row)+"\n")
+                rows.append(row)
+                continue
             fingerprint={"dataset_version":dataset["dataset_version"],"case":case,"setting":setting,"term_map":terms,"embedder":embedder_identity}
             task_id=sha(fingerprint)
             if task_id in completed: continue
@@ -341,7 +363,7 @@ def run_retrieval(store: Store, dataset: dict[str,Any], config: dict[str,Any], o
                 cached_vectors=document_vector_cache.get(index_version)
                 ranked,timing,vectors=_rank_units(embedder,queries,units,setting,cached_vectors)
                 timing["document_embedding_cache_hit"]=cached_vectors is not None
-                embedder_identity={"name":embedder.name,"dimension":embedder.dimension}
+                embedder_identity={"provider":setting["embedding_provider"],"name":embedder.name,"model":getattr(embedder,"model_id",embedder.name),"revision":getattr(embedder,"model_revision",None),"dimension":embedder.dimension,"normalize_embeddings":getattr(embedder,"normalize_embeddings",True),"device":getattr(embedder,"device",None)}
                 fingerprint["embedder"]=embedder_identity
                 if vectors is not None and cached_vectors is None:
                     document_vector_cache[index_version]=vectors
@@ -369,8 +391,8 @@ def aggregate(rows: list[dict[str,Any]]) -> dict[str,Any]:
             if r.get("execution_mode",r.get("status"))==mode: groups[r["setting"]["name"]].append(r)
         by_mode[mode]={}
         for name,items in groups.items():
-            keys=("precision_at_k","recall_at_k","mrr_at_k","ndcg_at_k")
-            by_mode[mode][name]={"cases":len(items),**{k:(sum(v)/len(v) if (v:=[x["metrics"].get(k) for x in items if x["metrics"].get(k) is not None]) else None) for k in keys},"mean_duration_seconds":sum(x["duration_seconds"] for x in items)/len(items)}
+            keys=("precision_at_k","recall_at_k","mrr_at_k","ndcg_at_k","hit_rate_at_k")
+            by_mode[mode][name]={"cases":len(items),**{k:(sum(v)/len(v) if (v:=[x["metrics"].get(k) for x in items if x["metrics"].get(k) is not None]) else None) for k in keys},"mean_duration_seconds":sum(x["duration_seconds"] for x in items)/len(items),"mean_search_seconds":sum(x.get("search_seconds",0) for x in items)/len(items),"mean_embedding_seconds":sum(x.get("embedding_seconds",0) for x in items)/len(items)}
     no_evidence={mode:sum(r.get("no_evidence_case",False) and r.get("execution_mode",r.get("status"))==mode for r in successful) for mode in ("actual","mock")}
     return {"settings":by_mode["actual"],"settings_by_execution_mode":by_mode,"no_evidence_runs":sum(no_evidence.values()),"no_evidence_runs_by_execution_mode":no_evidence,"excluded_from_relevance_metrics":len(rows)-len(valid),"note":"Actual and mock metrics are reported separately and use labeled relevance only. Cases without relevance labels and rediscovery cases are not scored as irrelevant."}
 
@@ -533,9 +555,9 @@ def report(results_dir: Path, output: Path) -> dict[str,Any]:
     retrieval=_read_jsonl(results_dir/"retrieval_results.jsonl"); generation=_read_jsonl(results_dir/"generation_results.jsonl"); summary=aggregate(retrieval)
     status=Counter(x.get("status","unknown") for x in generation); lines=["# TC RAG evaluation report","",f"Generated: {datetime.now(timezone.utc).isoformat()}","","## Retrieval",""]
     for mode,settings in summary["settings_by_execution_mode"].items():
-        lines += [f"### {mode.title()} retrieval","","| Setting | Cases | P@K | R@K | MRR@K | nDCG@K |","|---|---:|---:|---:|---:|---:|"]
-        for name,x in settings.items(): lines.append(f"| {name} | {x['cases']} | {_fmt(x['precision_at_k'])} | {_fmt(x['recall_at_k'])} | {_fmt(x['mrr_at_k'])} | {_fmt(x['ndcg_at_k'])} |")
-        if not settings: lines.append("| _No successful runs_ | 0 | N/A | N/A | N/A | N/A |")
+        lines += [f"### {mode.title()} retrieval","","| Setting | Cases | P@K | R@K | MRR@K | nDCG@K | Hit@K | Mean sec |","|---|---:|---:|---:|---:|---:|---:|---:|"]
+        for name,x in settings.items(): lines.append(f"| {name} | {x['cases']} | {_fmt(x['precision_at_k'])} | {_fmt(x['recall_at_k'])} | {_fmt(x['mrr_at_k'])} | {_fmt(x['ndcg_at_k'])} | {_fmt(x.get('hit_rate_at_k'))} | {_fmt(x.get('mean_duration_seconds'))} |")
+        if not settings: lines.append("| _No successful runs_ | 0 | N/A | N/A | N/A | N/A | N/A | N/A |")
         lines.append("")
     failures=Counter(r.get("evaluation_purpose") or "unspecified" for r in retrieval if r.get("status") in {"actual","mock"} and r.get("metrics",{}).get("relevant_count",0)>0 and (r.get("metrics",{}).get("recall_at_k") or 0)<1)
     lines += ["Metrics are based only on supplied relevance labels. They do not prove product requirements coverage.","","### Retrieval failures by purpose","",stable_json(dict(failures)),"","## Generation","",f"Status counts: `{dict(status)}`","","| Backend | Condition | Runs | Candidates mean | Valid ratio mean | Valid ratio SD | Forbidden hits | Mean seconds |","|---|---|---:|---:|---:|---:|---:|---:|"]
@@ -563,11 +585,11 @@ def _read_jsonl(path: Path) -> list[dict[str,Any]]:
 
 
 def _write_csv(path: Path, rows: list[dict[str,Any]]) -> None:
-    fields=["experiment_id","case_id","run_id","status","execution_mode","setting_name","precision_at_k","recall_at_k","mrr_at_k","ndcg_at_k","duration_seconds","error"]
+    fields=["experiment_id","case_id","run_id","status","execution_mode","setting_name","precision_at_k","recall_at_k","mrr_at_k","ndcg_at_k","hit_rate_at_k","duration_seconds","search_seconds","embedding_seconds","error"]
     with path.open("w",encoding="utf-8-sig",newline="") as f:
         w=csv.DictWriter(f,fieldnames=fields); w.writeheader()
         for r in rows:
-            m=r.get("metrics",{}); values={"experiment_id":r.get("experiment_id"),"case_id":r.get("case_id"),"run_id":r.get("run_id"),"status":r.get("status"),"execution_mode":r.get("execution_mode"),"setting_name":r.get("setting",{}).get("name"),"precision_at_k":m.get("precision_at_k"),"recall_at_k":m.get("recall_at_k"),"mrr_at_k":m.get("mrr_at_k"),"ndcg_at_k":m.get("ndcg_at_k"),"duration_seconds":r.get("duration_seconds"),"error":r.get("error")}; w.writerow({key:safe_cell(value) for key,value in values.items()})
+            m=r.get("metrics",{}); values={"experiment_id":r.get("experiment_id"),"case_id":r.get("case_id"),"run_id":r.get("run_id"),"status":r.get("status"),"execution_mode":r.get("execution_mode"),"setting_name":r.get("setting",{}).get("name"),"precision_at_k":m.get("precision_at_k"),"recall_at_k":m.get("recall_at_k"),"mrr_at_k":m.get("mrr_at_k"),"ndcg_at_k":m.get("ndcg_at_k"),"hit_rate_at_k":m.get("hit_rate_at_k"),"duration_seconds":r.get("duration_seconds"),"search_seconds":r.get("search_seconds"),"embedding_seconds":r.get("embedding_seconds"),"error":r.get("error")}; w.writerow({key:safe_cell(value) for key,value in values.items()})
 
 
 def _write_generation_csv(path: Path, rows: list[dict[str,Any]]) -> None:

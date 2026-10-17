@@ -97,6 +97,128 @@ class HashEmbedder(Embedder):
         return result
 
 
+class SentenceTransformerEmbedder(Embedder):
+    """Optional local neural embedder.
+
+    Importing this class does not require sentence-transformers.  The optional
+    dependency is loaded only when the provider is selected, so existing mock
+    and OpenAI flows remain usable without a model cache or torch install.
+    """
+
+    _model_cache: dict[tuple[str, str | None, str, str | None], object] = {}
+    _load_errors: dict[tuple[str, str | None, str, str | None], str] = {}
+
+    def __init__(
+        self,
+        model: str = "BAAI/bge-m3",
+        revision: str | None = None,
+        dimension: int | None = None,
+        device: str = "auto",
+        batch_size: int = 16,
+        normalize_embeddings: bool = True,
+        max_seq_length: int | None = None,
+        model_cache_dir: str | None = None,
+    ):
+        if not model.strip():
+            raise ValueError("embedding_model must not be empty")
+        if dimension is not None and int(dimension) <= 0:
+            raise ValueError("dimension must be a positive integer")
+        if int(batch_size) <= 0:
+            raise ValueError("batch_size must be positive")
+        self.name = model
+        self.model_id = model
+        self.model_revision = revision
+        self.requested_dimension = int(dimension) if dimension is not None else None
+        self.batch_size = int(batch_size)
+        self.normalize_embeddings = bool(normalize_embeddings)
+        self.requested_device = device
+        self.model_cache_dir = model_cache_dir
+        self.device = self._resolve_device(device)
+        self._model = self._load_model()
+        if max_seq_length is not None:
+            if int(max_seq_length) <= 0:
+                raise ValueError("max_seq_length must be positive")
+            self._model.max_seq_length = int(max_seq_length)
+        inferred = getattr(self._model, "get_sentence_embedding_dimension", lambda: None)()
+        if inferred is None:
+            raise RuntimeError("embedding model did not expose its output dimension")
+        self.dimension = int(inferred)
+        if self.requested_dimension is not None and self.dimension != self.requested_dimension:
+            raise ValueError(
+                f"embedding dimension mismatch: configured {self.requested_dimension}, model returned {self.dimension}"
+            )
+
+    @staticmethod
+    def _resolve_device(requested: str) -> str:
+        if requested not in {"auto", "cpu", "mps", "cuda"}:
+            raise ValueError("device must be one of auto, cpu, mps, cuda")
+        if requested in {"cpu", "cuda"}:
+            return requested
+        try:
+            import torch
+        except ImportError:
+            return "cpu"
+        if requested == "mps":
+            return "mps" if torch.backends.mps.is_available() else "cpu"
+        if torch.cuda.is_available():
+            return "cuda"
+        if torch.backends.mps.is_available():
+            return "mps"
+        return "cpu"
+
+    def _load_model(self):
+        key = (self.model_id, self.model_revision, self.device, self.model_cache_dir)
+        if key in self._model_cache:
+            return self._model_cache[key]
+        if key in self._load_errors:
+            raise RuntimeError(self._load_errors[key])
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as exc:
+            raise RuntimeError(
+                "local embedding provider requires optional dependency 'sentence-transformers'; "
+                "install with: pip install -e '.[local-embedding]'"
+            ) from exc
+        kwargs = {"device": self.device}
+        if self.model_cache_dir:
+            kwargs["cache_folder"] = self.model_cache_dir
+        if self.model_revision:
+            kwargs["revision"] = self.model_revision
+        try:
+            model = SentenceTransformer(self.model_id, **kwargs)
+        except (OSError, RuntimeError, ValueError) as exc:
+            message = f"failed to load local embedding model {self.model_id}: {exc}"
+            self._load_errors[key] = message
+            raise RuntimeError(message) from exc
+        self._model_cache[key] = model
+        return model
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        if any(not isinstance(text, str) or not text.strip() for text in texts):
+            raise ValueError("embedding input must contain non-empty strings")
+        if not texts:
+            return []
+        try:
+            values = self._model.encode(
+                texts,
+                batch_size=self.batch_size,
+                normalize_embeddings=self.normalize_embeddings,
+                convert_to_numpy=True,
+                show_progress_bar=False,
+            )
+        except (MemoryError, RuntimeError, OSError) as exc:
+            raise RuntimeError(f"local embedding failed on device {self.device}: {exc}") from exc
+        rows = values.tolist() if hasattr(values, "tolist") else values
+        if len(rows) != len(texts):
+            raise RuntimeError("embedding model returned an unexpected number of vectors")
+        result = []
+        for row in rows:
+            if len(row) != self.dimension or any(not math.isfinite(float(value)) for value in row):
+                raise ValueError("embedding model returned invalid dimension or non-finite values")
+            result.append([float(value) for value in row])
+        return result
+
+
 class OpenAICompatibleEmbedder(Embedder):
     def __init__(self):
         self.api_key=os.environ["OPENAI_API_KEY"]; self.base=os.getenv("OPENAI_BASE_URL","https://api.openai.com/v1").rstrip("/")
@@ -108,10 +230,21 @@ class OpenAICompatibleEmbedder(Embedder):
         return values
 
 
-def get_embedder(mode:str)->Embedder:
+def get_embedder(mode:str, **settings)->Embedder:
     if mode=="auto": mode="openai" if os.getenv("OPENAI_API_KEY") else "mock"
     if mode=="openai": return OpenAICompatibleEmbedder()
     if mode=="mock": return HashEmbedder()
+    if mode in {"local", "sentence-transformers"}:
+        return SentenceTransformerEmbedder(
+            model=settings.get("embedding_model", "BAAI/bge-m3"),
+            revision=settings.get("model_revision"),
+            dimension=settings.get("dimension"),
+            device=settings.get("device", "auto"),
+            batch_size=settings.get("batch_size", 16),
+            normalize_embeddings=settings.get("normalize_embeddings", True),
+            max_seq_length=settings.get("max_seq_length"),
+            model_cache_dir=settings.get("model_cache_dir"),
+        )
     raise ValueError(f"unsupported embedding provider: {mode}")
 
 

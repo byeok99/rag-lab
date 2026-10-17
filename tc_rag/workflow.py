@@ -47,7 +47,7 @@ def build_index(store: Store, embedder: Embedder, project: str, version: str, in
         (index_version, project, version))
     for tc, vector in zip(cases, vectors):
         source = tc.source_refs[0] if tc.source_refs else {}
-        metadata = {"record_id":tc.record_id,"project_id":tc.project_id,"product_version":tc.product_version,"category_large":tc.category_large,"category_medium":tc.category_medium,"category_small":tc.category_small,"origin":tc.origin,"source_document_id":source.get("source_document_id", ""),"source":source,"data_version":split_version or "all"}
+        metadata = {"record_id":tc.record_id,"project_id":tc.project_id,"product_version":tc.product_version,"category_large":tc.category_large,"category_medium":tc.category_medium,"category_small":tc.category_small,"origin":tc.origin,"source_document_id":source.get("source_document_id", ""),"source":source,"data_version":split_version or "all","provider":type(embedder).__name__,"model_id":getattr(embedder,"model_id",embedder.name),"revision":getattr(embedder,"model_revision",None),"dimension":len(vector),"normalize_embeddings":getattr(embedder,"normalize_embeddings",True)}
         store.db.execute("INSERT INTO vector_index VALUES(?,?,?,?,?,?,?,?,?)", (index_version,tc.record_id,f"{tc.record_id}:0",embedder.name,len(vector),"fields-v1",json.dumps(vector),stable_json(metadata),now()))
     store.db.commit()
     return {"indexed":len(cases),"index_version":index_version,"model":embedder.name,"dimension":embedder.dimension,"mode":"real" if embedder.name != "local-hash-v1" else "mock/local"}
@@ -102,4 +102,3 @@ def exact_and_suspected_duplicates(candidate: TestCase, cases: list[TestCase]) -
         if target and target==other: exact.append(tc.record_id)
         elif ratio >= .82: suspected.append(tc.record_id)
     return {"exact":exact,"suspected_semantic":suspected}
-

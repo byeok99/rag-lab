@@ -1,4 +1,6 @@
 import json
+import sys
+import types
 
 from tc_rag import providers
 
@@ -54,3 +56,48 @@ def test_unknown_provider_modes_fail_closed():
             assert False, "unknown providers must not silently become mock"
         except ValueError as exc:
             assert "unsupported" in str(exc)
+
+
+def test_local_sentence_transformer_provider_is_optional_and_validates_dimension(monkeypatch):
+    class FakeModel:
+        max_seq_length = 512
+        def __init__(self, name, **kwargs):
+            self.name = name
+            self.kwargs = kwargs
+        def get_sentence_embedding_dimension(self):
+            return 3
+        def encode(self, texts, **kwargs):
+            return [[1.0, 0.0, 0.0] for _ in texts]
+
+    fake_module = types.SimpleNamespace(SentenceTransformer=FakeModel)
+    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    providers.SentenceTransformerEmbedder._model_cache.clear()
+    embedder = providers.get_embedder(
+        "local", embedding_model="BAAI/bge-m3", dimension=3,
+        device="cpu", batch_size=2, max_seq_length=128,
+    )
+    assert embedder.name == "BAAI/bge-m3"
+    assert embedder.dimension == 3
+    assert embedder._model.max_seq_length == 128
+    assert embedder.embed(["query"]) == [[1.0, 0.0, 0.0]]
+    assert providers.get_embedder("local", embedding_model="BAAI/bge-m3", dimension=3, device="cpu")._model is embedder._model
+
+
+def test_local_sentence_transformer_rejects_empty_text_and_dimension_mismatch(monkeypatch):
+    class FakeModel:
+        def __init__(self, *args, **kwargs): pass
+        def get_sentence_embedding_dimension(self): return 2
+        def encode(self, texts, **kwargs): return [[1.0, 0.0] for _ in texts]
+    monkeypatch.setitem(sys.modules, "sentence_transformers", types.SimpleNamespace(SentenceTransformer=FakeModel))
+    providers.SentenceTransformerEmbedder._model_cache.clear()
+    try:
+        providers.get_embedder("local", dimension=3, device="cpu")
+        assert False, "dimension mismatch must fail"
+    except ValueError as exc:
+        assert "dimension mismatch" in str(exc)
+    embedder = providers.get_embedder("local", dimension=2, device="cpu")
+    try:
+        embedder.embed([""])
+        assert False, "empty strings must fail"
+    except ValueError as exc:
+        assert "non-empty" in str(exc)
