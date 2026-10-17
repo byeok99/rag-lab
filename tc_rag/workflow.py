@@ -34,13 +34,20 @@ def make_split(store: Store, project: str, version: str, split_version: str, hol
     return {"development": len(cases) - held, "evaluation": held, "groups": len(groups)}
 
 
-def build_index(store: Store, embedder: Embedder, project: str, version: str, index_version: str, split_version: str | None = None, include_approved_generated: bool = False) -> dict[str, Any]:
+def _profile_embedding_text(tc: TestCase, profile: str) -> str:
+    if profile == "E2":
+        category = " / ".join(x for x in (tc.category_large, tc.category_medium, tc.category_small) if x)
+        return "\n".join(x for x in (f"[CATEGORY]\n{category}" if category else "", f"[SCENARIO]\n{tc.scenario}" if tc.scenario else "") if x)
+    return embedding_text(tc)
+
+
+def build_index(store: Store, embedder: Embedder, project: str, version: str, index_version: str, split_version: str | None = None, include_approved_generated: bool = False, embedding_input: str = "E4") -> dict[str, Any]:
     cases = store.list_cases(project, version)
     if split_version:
         allowed = {r[0] for r in store.db.execute("SELECT record_id FROM splits WHERE split_version=? AND partition='development'", (split_version,))}
         cases = [tc for tc in cases if tc.record_id in allowed]
     cases = [tc for tc in cases if tc.origin != "generated" or (include_approved_generated and tc.review_status == "approved")]
-    texts = [embedding_text(tc) for tc in cases]
+    texts = [_profile_embedding_text(tc, embedding_input) for tc in cases]
     vectors = embedder.embed(texts) if texts else []
     store.db.execute("""DELETE FROM vector_index WHERE index_version=? AND record_id IN
         (SELECT record_id FROM test_cases WHERE project_id=? AND product_version=?)""",
@@ -48,7 +55,7 @@ def build_index(store: Store, embedder: Embedder, project: str, version: str, in
     for tc, vector in zip(cases, vectors):
         source = tc.source_refs[0] if tc.source_refs else {}
         metadata = {"record_id":tc.record_id,"project_id":tc.project_id,"product_version":tc.product_version,"category_large":tc.category_large,"category_medium":tc.category_medium,"category_small":tc.category_small,"origin":tc.origin,"source_document_id":source.get("source_document_id", ""),"source":source,"data_version":split_version or "all","provider":type(embedder).__name__,"model_id":getattr(embedder,"model_id",embedder.name),"revision":getattr(embedder,"model_revision",None),"dimension":len(vector),"normalize_embeddings":getattr(embedder,"normalize_embeddings",True)}
-        store.db.execute("INSERT INTO vector_index VALUES(?,?,?,?,?,?,?,?,?)", (index_version,tc.record_id,f"{tc.record_id}:0",embedder.name,len(vector),"fields-v1",json.dumps(vector),stable_json(metadata),now()))
+        store.db.execute("INSERT INTO vector_index VALUES(?,?,?,?,?,?,?,?,?)", (index_version,tc.record_id,f"{tc.record_id}:0",embedder.name,len(vector),f"{embedding_input}:whitespace:C1",json.dumps(vector),stable_json({**metadata,"embedding_input":embedding_input,"index_version":index_version}),now()))
     store.db.commit()
     return {"indexed":len(cases),"index_version":index_version,"model":embedder.name,"dimension":embedder.dimension,"mode":"real" if embedder.name != "local-hash-v1" else "mock/local"}
 

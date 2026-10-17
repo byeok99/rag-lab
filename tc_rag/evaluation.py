@@ -23,6 +23,7 @@ DEFAULTS = {
     "embedding_provider": "mock", "embedding_model": "local-hash-v1",
     "model_revision": None, "dimension": 384, "device": "cpu", "batch_size": 16,
     "normalize_embeddings": True, "max_seq_length": None, "model_cache_dir": None,
+    "vector_index_version": None,
 }
 REQUIRED_CASE = {
     "case_id", "project_id", "product_version", "user_request", "evaluation_purpose",
@@ -303,6 +304,25 @@ def _persist_experiment_index(store: Store, units: list[dict[str,Any]], vectors:
     store.db.commit()
 
 
+def _load_index_vectors(store: Store, index_version: str, embedder, units: list[dict[str,Any]]) -> list[list[float]]:
+    rows = store.db.execute(
+        "SELECT record_id, model, dimension, vector_json, metadata_json FROM vector_index WHERE index_version=? AND model=?",
+        (index_version, embedder.name),
+    ).fetchall()
+    vectors = {}
+    for row in rows:
+        if int(row["dimension"]) != int(embedder.dimension):
+            raise ValueError(f"stored index dimension mismatch for {index_version}")
+        metadata = json.loads(row["metadata_json"])
+        if metadata.get("embedding_input") != "E2":
+            raise ValueError(f"stored index {index_version} is not an E2 index")
+        vectors[row["record_id"]] = json.loads(row["vector_json"])
+    missing = [rid for unit in units for rid in unit["member_ids"] if rid not in vectors]
+    if missing:
+        raise ValueError(f"stored index {index_version} is missing {len(missing)} searchable records")
+    return [vectors[unit["member_ids"][0]] for unit in units]
+
+
 def collapse_units(ranked: list[dict[str,Any]], cases: dict[str,TestCase], k: int) -> list[dict[str,Any]]:
     best={}
     for unit in ranked:
@@ -361,8 +381,13 @@ def run_retrieval(store: Store, dataset: dict[str,Any], config: dict[str,Any], o
                 index_fingerprint={"dataset_version":dataset["dataset_version"],"setting":setting,"term_map":terms,"embedder":embedder_identity,"project_id":case["project_id"],"product_version":case["product_version"],"units":sha([[u["member_ids"],u["text"]] for u in units])}
                 index_version="exp:"+config.get("experiment_id","experiment")+":"+sha(index_fingerprint)[:16]
                 cached_vectors=document_vector_cache.get(index_version)
+                persisted_index=setting.get("vector_index_version")
+                if cached_vectors is None and persisted_index and setting["search_method"] in {"vector","hybrid"}:
+                    cached_vectors=_load_index_vectors(store,persisted_index,embedder,units)
+                    document_vector_cache[index_version]=cached_vectors
                 ranked,timing,vectors=_rank_units(embedder,queries,units,setting,cached_vectors)
                 timing["document_embedding_cache_hit"]=cached_vectors is not None
+                timing["vector_index_source"]=persisted_index
                 embedder_identity={"provider":setting["embedding_provider"],"name":embedder.name,"model":getattr(embedder,"model_id",embedder.name),"revision":getattr(embedder,"model_revision",None),"dimension":embedder.dimension,"normalize_embeddings":getattr(embedder,"normalize_embeddings",True),"device":getattr(embedder,"device",None)}
                 fingerprint["embedder"]=embedder_identity
                 if vectors is not None and cached_vectors is None:

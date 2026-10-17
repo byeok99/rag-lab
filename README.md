@@ -101,6 +101,8 @@ Stage 7 비교 설정과 재현 절차는 다음 파일에 있습니다.
 
 BGE-M3 가중치를 확보한 뒤 실행한 실제 비교 결과는 `examples/evaluation_config.stage7-local-embedding-v3.json`과 `outputs/stage7-local-embedding-v3/`에 저장됩니다.
 
+저장된 SQLite 벡터를 재사용하는 비교는 `examples/evaluation_config.stage7-vector-db-v1.json`으로 실행합니다. `vector_index_version`이 지정된 Vector/Hybrid 조건은 문서 벡터를 다시 임베딩하지 않고 SQLite에서 읽으며, 질의만 임베딩합니다.
+
 ## 4. 프로젝트 구조
 
 ```text
