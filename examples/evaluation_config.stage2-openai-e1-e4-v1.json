@@ -1,0 +1,45 @@
+{
+  "experiment_id": "tta-26-01181-stage2-openai-e1-e4-v1",
+  "dataset_version": "tta-26-01181-eval-reviewed-v1",
+  "evaluation_split": "development",
+  "baseline": {
+    "embedding_provider": "openai",
+    "embedding_input": "E4",
+    "search_unit": "C1",
+    "search_method": "vector",
+    "top_k": 5,
+    "candidate_k": 20,
+    "rerank": "none",
+    "query_mode": "Q1",
+    "selection": "similarity",
+    "filters": "project_version",
+    "context_token_budget": 4000,
+    "preprocess": "whitespace",
+    "chunk_chars": 2000,
+    "chunk_overlap": 200,
+    "group_size": 5,
+    "rrf_k": 60
+  },
+  "experiments": [
+    {"name": "E1", "embedding_input": "E1"},
+    {"name": "E2", "embedding_input": "E2"},
+    {"name": "E3", "embedding_input": "E3"}
+  ],
+  "generation": {
+    "retrieval_setting": "baseline",
+    "conditions": ["G0", "G1"],
+    "backends": ["api", "codex"],
+    "repetitions": 3,
+    "target_count": 5,
+    "instructions_version": "generation-v1",
+    "schema_version": "candidate-v1"
+  },
+  "pricing": {
+    "model": "text-embedding-3-small",
+    "input_per_million": 0.02,
+    "currency": "USD",
+    "effective_date": "2026-10-17",
+    "source": "https://developers.openai.com/api/docs/models/text-embedding-3-small"
+  },
+  "term_map": {}
+}

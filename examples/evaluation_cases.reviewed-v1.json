@@ -1,0 +1,165 @@
+{
+  "dataset_version": "tta-26-01181-eval-reviewed-v1",
+  "draft": true,
+  "created_from": "기존 TTA-26-01181 TC 저장소",
+  "label_scope_note": "개발 분할의 관련 TC와 생성 근거는 사람 검토를 완료했다. 미판정 TC를 무관으로 확정하지 않으며 최종 분할은 별도 검토 전이다.",
+  "cases": [
+    {
+      "case_id": "DEV-NORMAL-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "B-Tree 인덱스를 생성하고 범위 검색을 수행했을 때 인덱스가 사용되며 조회 결과가 정확한지 검증할 TC를 찾아줘.",
+      "evaluation_purpose": "정상 기능과 연속된 검증 근거 검색", "relevant_record_ids": ["rec_18af9ffd82b54a4f81b8051872a83b8c", "rec_c154c393a4e94a50ae97994f6bfe8e6b", "rec_d01ecb53895d48d59665717c9bb09c30"],
+      "relevance_grades": {"rec_c154c393a4e94a50ae97994f6bfe8e6b": 2, "rec_d01ecb53895d48d59665717c9bb09c30": 2, "rec_18af9ffd82b54a4f81b8051872a83b8c": 1}, "curated_evidence_ids": ["rec_18af9ffd82b54a4f81b8051872a83b8c", "rec_c154c393a4e94a50ae97994f6bfe8e6b", "rec_d01ecb53895d48d59665717c9bb09c30"],
+      "generation_criteria": ["생성·실행계획·결과 정확성을 분리", "관찰 가능한 기대결과"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["지원되지 않은 인덱스 옵션", "근거 없는 성능 향상률"],
+      "structured_query": {"feature": "B-Tree 인덱스", "inputs": "범위 검색", "state": "인덱스 생성 완료"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-BOUNDARY-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "BRIN 인덱스가 적용된 데이터의 범위 검색에서 조회 건수와 최솟값·최댓값이 정확한지 확인할 TC를 찾아줘.",
+      "evaluation_purpose": "경계값 및 집계 결과 검색", "relevant_record_ids": ["rec_0d4c983785b54cc881d524a6b9caeb3a", "rec_4186c0f014df44bc889533de195ef4f4"],
+      "relevance_grades": {"rec_0d4c983785b54cc881d524a6b9caeb3a": 2, "rec_4186c0f014df44bc889533de195ef4f4": 1}, "curated_evidence_ids": ["rec_0d4c983785b54cc881d524a6b9caeb3a"],
+      "generation_criteria": ["최솟값·최댓값·건수 각각 판정 가능"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["데이터 최솟값과 최댓값의 임의 수치"],
+      "structured_query": {"feature": "BRIN 인덱스", "inputs": "범위 조건", "state": "인덱스 생성 완료"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-INVALID-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "비결정적 VOLATILE 함수를 사용한 함수 기반 인덱스 생성이 허용되는지 검증할 TC를 찾아줘.",
+      "evaluation_purpose": "잘못된 인덱스 정의 입력", "relevant_record_ids": ["rec_e87cca88cdd04f50915f71cc7f9ff5ef"], "relevance_grades": {"rec_e87cca88cdd04f50915f71cc7f9ff5ef": 2}, "curated_evidence_ids": ["rec_e87cca88cdd04f50915f71cc7f9ff5ef"],
+      "generation_criteria": ["차단 여부 확인", "오류 메시지는 원문 근거가 있을 때만 명시"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["구체적인 오류 코드", "오류 메시지 전문"],
+      "structured_query": {"feature": "함수 기반 인덱스", "inputs": "VOLATILE 함수", "state": "인덱스 생성 전"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-PERMISSION-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "일반 사용자에게 테이블 권한을 부여한 뒤 허용 작업을 수행하고, 권한 회수 후 같은 작업이 차단되는지 검증할 TC를 찾아줘.",
+      "evaluation_purpose": "권한 부여와 회수 상태 비교", "relevant_record_ids": ["rec_59831bf4c2ff4223a0f7ec851c8ba269", "rec_8552af7f06c8458e81f296b0730fb5de"],
+      "relevance_grades": {"rec_59831bf4c2ff4223a0f7ec851c8ba269": 2, "rec_8552af7f06c8458e81f296b0730fb5de": 2}, "curated_evidence_ids": ["rec_59831bf4c2ff4223a0f7ec851c8ba269", "rec_8552af7f06c8458e81f296b0730fb5de"],
+      "generation_criteria": ["권한 보유와 회수 상태를 분리", "SELECT·INSERT·UPDATE 판정 대응"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["원본에 없는 DELETE 권한", "관리자 정책"],
+      "structured_query": {"feature": "역할 기반 접근 제어", "permission": "일반 사용자 테이블 권한", "state": "권한 부여 후와 회수 후"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-STATE-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "데이터 마스킹 정책을 비활성화했다가 다시 활성화할 때 상태 변경과 조회 결과가 함께 바뀌는지 검증할 TC를 찾아줘.",
+      "evaluation_purpose": "허용 상태 전이", "relevant_record_ids": ["rec_2a958285832643ddb0711ca3e2647233", "rec_ebe81f715c704cf49d67f2733af36990", "rec_dfb55d26e5bc4700a409d50a8c4072b1", "rec_2ffd1c7341ec42a49dd502dcb535ce75"],
+      "relevance_grades": {"rec_2a958285832643ddb0711ca3e2647233": 2, "rec_ebe81f715c704cf49d67f2733af36990": 2, "rec_dfb55d26e5bc4700a409d50a8c4072b1": 2, "rec_2ffd1c7341ec42a49dd502dcb535ce75": 2}, "curated_evidence_ids": ["rec_2a958285832643ddb0711ca3e2647233", "rec_ebe81f715c704cf49d67f2733af36990", "rec_dfb55d26e5bc4700a409d50a8c4072b1", "rec_2ffd1c7341ec42a49dd502dcb535ce75"],
+      "generation_criteria": ["정책 상태와 사용자 조회 결과를 구분", "전이 순서 명시"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["전환 소요 시간", "자동 전환 정책"],
+      "structured_query": {"feature": "데이터 마스킹 정책", "permission": "대상 일반 사용자", "state": "활성→비활성→활성"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-POLICY-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "VPD 정책 적용 테이블을 관리자와 일반 사용자가 조회할 때 각 권한에 맞는 행이 반환되는지 검증할 TC를 찾아줘.",
+      "evaluation_purpose": "정책 적용과 권한별 결과", "relevant_record_ids": ["rec_dab136d5a02a4646a20b8a3a29dc8041", "rec_46137f75852f4e1d96be0be6bb2d5f93"],
+      "relevance_grades": {"rec_dab136d5a02a4646a20b8a3a29dc8041": 2, "rec_46137f75852f4e1d96be0be6bb2d5f93": 2}, "curated_evidence_ids": ["rec_dab136d5a02a4646a20b8a3a29dc8041", "rec_46137f75852f4e1d96be0be6bb2d5f93"],
+      "generation_criteria": ["관리자와 일반 사용자 기대결과 분리"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["허용 행의 구체적인 조건", "관리자 역할명"],
+      "structured_query": {"feature": "VPD 정책", "permission": "관리자와 일반 사용자", "state": "정책 활성"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-FAILURE-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "대용량 데이터 적재에서 허용 오류 수를 초과할 때 적재 작업이 중단되는지 확인할 TC를 찾아줘.",
+      "evaluation_purpose": "실패 및 중단", "relevant_record_ids": ["rec_16ee5ba8cecc418683d827e1fabaec77"], "relevance_grades": {"rec_16ee5ba8cecc418683d827e1fabaec77": 2}, "curated_evidence_ids": ["rec_16ee5ba8cecc418683d827e1fabaec77"],
+      "generation_criteria": ["오류 허용 범위 초과 조건과 중단 관찰 분리"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["허용 오류 수의 임의 값", "자동 롤백 범위"],
+      "structured_query": {"feature": "EDB*Loader", "inputs": "ERRORS 옵션 및 오류 데이터", "state": "대용량 적재 진행 중"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-CONCURRENT-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "온라인 인덱스 생성 중 다른 세션이 INSERT와 UPDATE를 수행할 때 DML 차단 여부, 인덱스 완료 상태, 변경 데이터 반영을 검증할 TC를 찾아줘.",
+      "evaluation_purpose": "여러 TC 근거 조합", "relevant_record_ids": ["rec_9381ff999d4046f9a5ee627a84ea6168", "rec_cda48acc9d634b1198a98376c49411ef", "rec_78e3f7466eb24c02aa142504ec0c7c4a", "rec_7fd740987aaf4773b99206b9df98eedd", "rec_6dcbb86c131d42648c9bf3b2ffa9bf91", "rec_8262ce92fc034b3e848878c234ac0053"],
+      "relevance_grades": {"rec_9381ff999d4046f9a5ee627a84ea6168": 2, "rec_cda48acc9d634b1198a98376c49411ef": 2, "rec_78e3f7466eb24c02aa142504ec0c7c4a": 2, "rec_7fd740987aaf4773b99206b9df98eedd": 2, "rec_6dcbb86c131d42648c9bf3b2ffa9bf91": 2, "rec_8262ce92fc034b3e848878c234ac0053": 2}, "curated_evidence_ids": ["rec_9381ff999d4046f9a5ee627a84ea6168", "rec_cda48acc9d634b1198a98376c49411ef", "rec_78e3f7466eb24c02aa142504ec0c7c4a", "rec_7fd740987aaf4773b99206b9df98eedd", "rec_6dcbb86c131d42648c9bf3b2ffa9bf91", "rec_8262ce92fc034b3e848878c234ac0053"],
+      "generation_criteria": ["INSERT와 UPDATE를 독립 판정", "DML 차단·인덱스 완료·데이터 반영을 구분"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["동시 사용자 수 제한", "완료 제한 시간", "DELETE 동작"],
+      "structured_query": {"feature": "온라인 인덱스", "inputs": "대량 테이블, 동시 INSERT와 UPDATE", "permission": "서로 다른 사용자", "state": "온라인 인덱스 생성 중"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-AUDIT-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "접속 감사 설정이 failed인 경우와 all인 경우 데이터베이스 접속 로그 기록 차이를 검증할 TC를 찾아줘.",
+      "evaluation_purpose": "설정값별 정책 비교", "relevant_record_ids": ["rec_6b6e6f09cf474f60b275c93b4813fc84", "rec_4839d412c31b4856869dbb2dfb6e9770"],
+      "relevance_grades": {"rec_6b6e6f09cf474f60b275c93b4813fc84": 2, "rec_4839d412c31b4856869dbb2dfb6e9770": 2}, "curated_evidence_ids": ["rec_6b6e6f09cf474f60b275c93b4813fc84", "rec_4839d412c31b4856869dbb2dfb6e9770"],
+      "generation_criteria": ["설정값과 접속 결과 조합을 명확히 대응"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["로그 보존 기간", "로그 파일 경로"],
+      "structured_query": {"feature": "접속 감사", "inputs": "failed와 all 설정", "state": "설정 적용 후 접속"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-SECURITY-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "SQL 보호 기능의 Passive 모드와 Active 모드에서 의심 쿼리의 탐지와 차단 차이를 확인할 TC를 찾아줘.",
+      "evaluation_purpose": "보안 모드별 동작", "relevant_record_ids": ["rec_a4ad34fc85a145c9a292adc9ac40c1ce", "rec_0693cfdc5ebf412c8cad1ca44e86b417", "rec_3ad8b654084745d58c63c7add7ced800"],
+      "relevance_grades": {"rec_a4ad34fc85a145c9a292adc9ac40c1ce": 1, "rec_0693cfdc5ebf412c8cad1ca44e86b417": 2, "rec_3ad8b654084745d58c63c7add7ced800": 2}, "curated_evidence_ids": ["rec_a4ad34fc85a145c9a292adc9ac40c1ce", "rec_0693cfdc5ebf412c8cad1ca44e86b417", "rec_3ad8b654084745d58c63c7add7ced800"],
+      "generation_criteria": ["Passive 탐지와 Active 차단을 혼동하지 않음"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["탐지 점수", "차단 오류 메시지"],
+      "structured_query": {"feature": "SQL/Protect", "inputs": "미학습 Relation 접근", "state": "Passive 및 Active 모드"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-LOCK-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "사용자 계정을 수동 잠금한 뒤 로그인이 차단되고, 잠금 해제 후 다시 로그인되는지 검증할 TC를 찾아줘.",
+      "evaluation_purpose": "잠금과 복구 상태 전이", "relevant_record_ids": ["rec_f8de5680a4414c43b5f3f31072b52fea", "rec_b76ace84a5984632a8b77cc5cb7c3a82"],
+      "relevance_grades": {"rec_f8de5680a4414c43b5f3f31072b52fea": 2, "rec_b76ace84a5984632a8b77cc5cb7c3a82": 2}, "curated_evidence_ids": ["rec_f8de5680a4414c43b5f3f31072b52fea", "rec_b76ace84a5984632a8b77cc5cb7c3a82"],
+      "generation_criteria": ["잠금 상태와 해제 상태를 순서대로 검증"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["잠금 지속 시간", "관리자 승인 절차"],
+      "structured_query": {"feature": "계정 잠금/해제", "permission": "일반 사용자", "state": "정상→잠금→해제"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-MASKING-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "마스킹 조건이 참인 사용자와 거짓인 사용자가 같은 데이터를 조회할 때 각각 마스킹값과 원본값을 확인할 TC를 찾아줘.",
+      "evaluation_purpose": "권한·조건별 출력 차이", "relevant_record_ids": ["rec_bc888ffaa7434d9ea168c5dc30b80306", "rec_cfe8febe1a504cb28b2e5aae65cca813"],
+      "relevance_grades": {"rec_bc888ffaa7434d9ea168c5dc30b80306": 2, "rec_cfe8febe1a504cb28b2e5aae65cca813": 2}, "curated_evidence_ids": ["rec_bc888ffaa7434d9ea168c5dc30b80306", "rec_cfe8febe1a504cb28b2e5aae65cca813"],
+      "generation_criteria": ["조건 참·거짓별 기대 출력 대응"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["구체적인 마스킹 문자열", "대상 컬럼명"],
+      "structured_query": {"feature": "데이터 마스킹", "permission": "조건 참 사용자와 조건 거짓 사용자", "state": "정책 활성"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-REBUILD-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "온라인 인덱스 리빌드 중 혼합 DML이 차단되지 않고 완료 후 인덱스가 유효하며 변경 데이터가 반영되는지 검증할 TC를 찾아줘.",
+      "evaluation_purpose": "동시 처리와 복구 완료 검증", "relevant_record_ids": ["rec_59c0420530b2403ca7bc41633c3238b0", "rec_5ea885eab8e44cf888084d5c27173fce", "rec_281e75626ea745ad90745a468cb2c47e", "rec_92ab336c93ab4545b021a483fae1dad0", "rec_dccd8ec273464026aa97f586d5886372"],
+      "relevance_grades": {"rec_59c0420530b2403ca7bc41633c3238b0": 2, "rec_5ea885eab8e44cf888084d5c27173fce": 2, "rec_281e75626ea745ad90745a468cb2c47e": 2, "rec_92ab336c93ab4545b021a483fae1dad0": 2, "rec_dccd8ec273464026aa97f586d5886372": 1}, "curated_evidence_ids": ["rec_59c0420530b2403ca7bc41633c3238b0", "rec_5ea885eab8e44cf888084d5c27173fce", "rec_281e75626ea745ad90745a468cb2c47e", "rec_92ab336c93ab4545b021a483fae1dad0"],
+      "generation_criteria": ["DML 차단·상태·반영을 독립 판정"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["성능 저하율", "완료 제한 시간"],
+      "structured_query": {"feature": "온라인 리빌드", "inputs": "연속 INSERT와 UPDATE", "state": "REINDEX INDEX CONCURRENTLY 실행 중"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-NO-EVIDENCE-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "모바일 생체인증으로 데이터베이스 관리자 콘솔에 로그인하고 지문 실패 후 얼굴 인식으로 자동 전환되는지 검증할 TC를 찾아줘.",
+      "evaluation_purpose": "관련 근거가 없는 요청", "relevant_record_ids": [], "relevance_grades": {}, "curated_evidence_ids": [],
+      "generation_criteria": ["근거 부족 표시", "관련 없는 계정 TC로 제품 동작을 확정하지 않음"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["생체인증 지원", "자동 전환 정책", "실패 허용 횟수"],
+      "structured_query": {"feature": "모바일 생체인증", "inputs": "지문 실패 후 얼굴 인식", "state": "관리자 콘솔 로그인"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-CONFLICT-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "SQL 문 감사 설정을 all 또는 none으로 변경했을 때 감사 로그가 기록되는 조건을 비교 검증할 TC를 찾아줘. 기존 TC의 기대결과가 설정명과 모순되는지도 표시해줘.",
+      "evaluation_purpose": "충돌하거나 불명확한 기대결과 탐지", "relevant_record_ids": ["rec_609aff5647954b9ea23950fde9d8c487", "rec_ea09d078797e466ebb39e5836a8d9c1c"],
+      "relevance_grades": {"rec_609aff5647954b9ea23950fde9d8c487": 2, "rec_ea09d078797e466ebb39e5836a8d9c1c": 2}, "curated_evidence_ids": ["rec_609aff5647954b9ea23950fde9d8c487", "rec_ea09d078797e466ebb39e5836a8d9c1c"],
+      "generation_criteria": ["충돌을 임의 해결하지 않고 검토 질문 생성"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["all과 none의 실제 정책을 외부 지식으로 확정"],
+      "structured_query": {"feature": "SQL 문 감사", "inputs": "all과 none", "state": "감사 설정 적용 후 SQL 실행"}, "human_reviewed": true
+    },
+    {
+      "case_id": "DEV-PARTITION-001", "evaluation_type": "retrieval", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "development",
+      "user_request": "파티션 테이블에 인덱스를 생성한 뒤 기존 파티션과 이후 추가한 신규 파티션에 로컬 인덱스가 생성되고 사용되는지 검증할 TC를 찾아줘.",
+      "evaluation_purpose": "기존·신규 상태 조합", "relevant_record_ids": ["rec_68909e66bd394013af877a421352ce45", "rec_765f1243958d4696b7b468af8e3847f4", "rec_4416c3c5857c4fb1b5e1394c473ef184", "rec_5c570478fdaa412599dec1059e3c02a7", "rec_f25c7ac0d3944d188123814b94f3bb66"],
+      "relevance_grades": {"rec_68909e66bd394013af877a421352ce45": 1, "rec_765f1243958d4696b7b468af8e3847f4": 2, "rec_4416c3c5857c4fb1b5e1394c473ef184": 2, "rec_5c570478fdaa412599dec1059e3c02a7": 2, "rec_f25c7ac0d3944d188123814b94f3bb66": 2}, "curated_evidence_ids": ["rec_765f1243958d4696b7b468af8e3847f4", "rec_4416c3c5857c4fb1b5e1394c473ef184", "rec_5c570478fdaa412599dec1059e3c02a7", "rec_f25c7ac0d3944d188123814b94f3bb66"],
+      "generation_criteria": ["기존 파티션과 신규 파티션을 분리"], "hidden_record_ids": [], "hidden_conditions": [], "forbidden_inferences": ["파티션 자동 생성 주기", "인덱스 이름 규칙"],
+      "structured_query": {"feature": "파티션 인덱스", "inputs": "기존 파티션과 신규 파티션", "state": "테이블 인덱스 생성 전후"}, "human_reviewed": true
+    },
+    {
+      "case_id": "FINAL-REDISCOVERY-001", "evaluation_type": "rediscovery", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "final",
+      "user_request": "Hash 인덱스의 생성과 검색 동작을 검증할 때 추가로 확인할 조건을 제안해줘.",
+      "evaluation_purpose": "지원되지 않는 범위 검색 조건 재발견", "relevant_record_ids": [], "curated_evidence_ids": ["rec_ef007adb06334447bed63a26ad63876d", "rec_d66bf563cf6c43269f04a1b2e49b288e", "rec_817b01862c7d4b7285b700eb06a98855"],
+      "hidden_record_ids": ["rec_b325b5be59414dabbda730fb7b869731"], "hidden_conditions": ["Hash 인덱스가 범위 검색 실행 계획에 사용되지 않는지 확인"],
+      "generation_criteria": ["동등 검색 근거에서 범위 검색 차이를 검토 후보로 제안", "제품 정책으로 과도하게 일반화하지 않음"], "forbidden_inferences": ["모든 DB 제품에서 Hash 인덱스 범위 검색 금지", "오류 메시지"],
+      "structured_query": {"feature": "Hash 인덱스", "inputs": "동등 검색과 다른 검색 조건", "state": "인덱스 생성 완료"}, "human_reviewed": false
+    },
+    {
+      "case_id": "FINAL-REDISCOVERY-002", "evaluation_type": "rediscovery", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "final",
+      "user_request": "VPD 정책의 허용 및 금지 상태 전이를 검증할 신규 TC 조건을 제안해줘.",
+      "evaluation_purpose": "권한 회수 후 정책 재적용 조건 재발견", "relevant_record_ids": [], "curated_evidence_ids": ["rec_442ccfeee7f244fcb8508181180e812e", "rec_af8b3c39b8274bd881855d5ceff93b17"],
+      "hidden_record_ids": ["rec_9d1b43b57bbd4c87873f903bba71c26d"], "hidden_conditions": ["EXEMPT ACCESS POLICY 권한 회수 후 행 제한이 다시 적용되는지 확인"],
+      "generation_criteria": ["권한 부여의 반대 전이인 회수를 제안", "허용 행 조건은 확정하지 않음"], "forbidden_inferences": ["권한 회수 즉시성", "행 필터의 구체 조건"],
+      "structured_query": {"feature": "VPD 정책", "permission": "EXEMPT ACCESS POLICY", "state": "권한 부여 후 회수"}, "human_reviewed": false
+    },
+    {
+      "case_id": "FINAL-REDISCOVERY-003", "evaluation_type": "rediscovery", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "final",
+      "user_request": "계정 잠금 정책의 정상·실패·시간 조건을 검증할 추가 TC를 제안해줘.",
+      "evaluation_purpose": "미래 잠금 시각 이전·이후 조건 재발견", "relevant_record_ids": [], "curated_evidence_ids": ["rec_f8de5680a4414c43b5f3f31072b52fea", "rec_b76ace84a5984632a8b77cc5cb7c3a82"],
+      "hidden_record_ids": ["rec_a8877de4cf1945e582371540b0167d91", "rec_cbdf36b61a194b17bdc06f93de93842a"], "hidden_conditions": ["미래 잠금 시각 이전에는 로그인 가능", "지정 시각 이후에는 로그인 차단"],
+      "generation_criteria": ["시간 경계 전후를 쌍으로 제안", "구체 시각을 임의 생성하지 않음"], "forbidden_inferences": ["시간대 정책", "잠금 시각 허용 범위"],
+      "structured_query": {"feature": "계정 잠금", "inputs": "미래 잠금 시각", "state": "지정 시각 이전과 이후"}, "human_reviewed": false
+    },
+    {
+      "case_id": "FINAL-REDISCOVERY-004", "evaluation_type": "rediscovery", "project_id": "TTA-26-01181", "product_version": "unspecified", "split": "final",
+      "user_request": "감사 로그의 생성·로테이션·보관 수명 주기를 검증할 추가 조건을 제안해줘.",
+      "evaluation_purpose": "만료 로그 삭제 조건 재발견", "relevant_record_ids": [], "curated_evidence_ids": ["rec_64fbaf6954c044f9b78f10ca74a4aa6d", "rec_1d1ac71dbaa646909289262647d8b3bb"],
+      "hidden_record_ids": ["rec_ab9599db699542c39984cc4146b65d29"], "hidden_conditions": ["감사 로그 만료 시간 경과 후 만료된 압축 로그 파일이 삭제되는지 확인"],
+      "generation_criteria": ["생성·압축 다음의 만료 삭제 수명 주기를 제안", "보존 기간 수치를 추측하지 않음"], "forbidden_inferences": ["기본 보존 기간", "삭제 주기", "저장 경로"],
+      "structured_query": {"feature": "감사 로그 아카이브", "inputs": "로테이션 및 만료 설정", "state": "현재 로그→압축 로그→만료 로그"}, "human_reviewed": false
+    }
+  ]
+}

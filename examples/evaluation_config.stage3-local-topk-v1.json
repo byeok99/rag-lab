@@ -1,0 +1,39 @@
+{
+  "experiment_id": "tta-26-01181-stage3-local-topk-v1",
+  "dataset_version": "tta-26-01181-eval-reviewed-v1",
+  "evaluation_split": "development",
+  "baseline": {
+    "embedding_provider": "mock",
+    "embedding_input": "E2",
+    "search_unit": "C1",
+    "search_method": "vector",
+    "top_k": 5,
+    "candidate_k": 20,
+    "rerank": "none",
+    "query_mode": "Q1",
+    "selection": "similarity",
+    "filters": "project_version",
+    "context_token_budget": 4000,
+    "preprocess": "whitespace",
+    "chunk_chars": 2000,
+    "chunk_overlap": 200,
+    "group_size": 5,
+    "rrf_k": 60
+  },
+  "experiments": [
+    {"name": "TopK-3", "top_k": 3},
+    {"name": "TopK-10", "top_k": 10},
+    {"name": "TopK-15", "top_k": 15}
+  ],
+  "generation": {
+    "retrieval_setting": "baseline",
+    "conditions": ["G0", "G1"],
+    "backends": ["codex"],
+    "repetitions": 3,
+    "target_count": 5,
+    "instructions_version": "generation-v1",
+    "schema_version": "candidate-v1"
+  },
+  "pricing": null,
+  "term_map": {}
+}

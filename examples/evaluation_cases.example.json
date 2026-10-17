@@ -1,0 +1,40 @@
+{
+  "dataset_version": "eval-draft-v1",
+  "draft": true,
+  "cases": [
+    {
+      "case_id": "replace-with-reviewed-case-001",
+      "evaluation_type": "retrieval",
+      "project_id": "YOUR_PROJECT",
+      "product_version": "YOUR_VERSION",
+      "user_request": "기능, 입력, 권한 및 상태를 포함한 실제 평가 요청으로 교체",
+      "evaluation_purpose": "정상 기능 검색",
+      "split": "development",
+      "relevant_record_ids": ["REPLACE_WITH_RECORD_ID"],
+      "relevance_grades": {"REPLACE_WITH_RECORD_ID": 2},
+      "curated_evidence_ids": ["REPLACE_WITH_RECORD_ID"],
+      "generation_criteria": ["실행 가능", "판정 가능", "근거 없는 정책 확정 금지"],
+      "hidden_record_ids": [],
+      "hidden_conditions": [],
+      "forbidden_inferences": ["근거 없는 제한값", "근거 없는 오류 메시지"],
+      "structured_query": {"feature": "기능명", "inputs": "입력 조건", "permission": "권한", "state": "현재 상태"},
+      "human_reviewed": false
+    },
+    {
+      "case_id": "replace-with-rediscovery-case-001",
+      "evaluation_type": "rediscovery",
+      "project_id": "YOUR_PROJECT",
+      "product_version": "YOUR_VERSION",
+      "user_request": "남은 TC 근거로 숨긴 테스트 조건을 제안하는지 확인할 요청으로 교체",
+      "evaluation_purpose": "조건 재발견",
+      "split": "final",
+      "relevant_record_ids": [],
+      "curated_evidence_ids": [],
+      "generation_criteria": ["숨긴 조건의 의미 재발견", "숨긴 TC에만 있는 정책 추측 금지"],
+      "hidden_record_ids": ["REPLACE_WITH_HIDDEN_RECORD_ID"],
+      "hidden_conditions": ["사람이 작성한 의미 단위 조건"],
+      "forbidden_inferences": ["숨긴 TC에만 존재하는 수치 또는 정책"],
+      "human_reviewed": false
+    }
+  ]
+}

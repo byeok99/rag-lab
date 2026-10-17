@@ -1,0 +1,21 @@
+.venv/
+.env
+node_modules/
+__pycache__/
+*.pyc
+.tc-rag/
+output/
+outputs/
+!outputs/
+!outputs/**
+# Keep human-readable reports, but do not version generated tabular, raw,
+# image, or inspection artifacts derived from local TC data.
+outputs/**/*.csv
+outputs/**/*.jsonl
+outputs/**/*.json
+outputs/**/*.png
+outputs/**/*.inspect.ndjson
+.coverage
+tc_rag_cli.egg-info/
+*.xls
+*.xlsx
